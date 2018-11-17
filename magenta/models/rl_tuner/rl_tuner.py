@@ -24,6 +24,10 @@ algorithm can be switched using the 'algorithm' hyperparameter.
 For more information, please consult the README.md file in this directory.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from collections import deque
 import os
 from os import makedirs
@@ -31,11 +35,12 @@ from os.path import exists
 import random
 import urllib
 
-# internal imports
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.misc import logsumexp
+from six.moves import range          # pylint: disable=redefined-builtin
+from six.moves import reload_module  # pylint: disable=redefined-builtin
+from six.moves import urllib         # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 from magenta.models.rl_tuner import note_rnn_loader
@@ -56,9 +61,9 @@ TRAIN_SEQUENCE_LENGTH = 192
 def reload_files():
   """Used to reload the imported dependency files (needed for ipynb notebooks).
   """
-  reload(note_rnn_loader)
-  reload(rl_tuner_ops)
-  reload(rl_tuner_eval_metrics)
+  reload_module(note_rnn_loader)
+  reload_module(rl_tuner_ops)
+  reload_module(rl_tuner_eval_metrics)
 
 
 class RLTuner(object):
@@ -97,7 +102,7 @@ class RLTuner(object):
 
     Args:
       output_dir: Where the model will save its compositions (midi files).
-      dqn_hparams: A tf_lib.hparams() object containing the hyperparameters of
+      dqn_hparams: A HParams object containing the hyperparameters of
         the DQN algorithm, including minibatch size, exploration probability,
         etc.
       reward_mode: Controls which reward function can be applied. There are
@@ -126,7 +131,7 @@ class RLTuner(object):
       note_rnn_type: If 'default', will use the basic LSTM described in the
         research paper. If 'basic_rnn', will assume the checkpoint is from a
         Magenta basic_rnn model.
-      note_rnn_hparams: A tf.HParams object which defines the hyper parameters
+      note_rnn_hparams: A HParams object which defines the hyper parameters
         used to train the MelodyRNN model that will be loaded from a checkpoint.
       num_notes_in_melody: The length of a composition of the model
       input_size: the size of the one-hot vector encoding a note that is input
@@ -173,8 +178,8 @@ class RLTuner(object):
                          'the single_midi priming mode.')
 
       if note_rnn_checkpoint_dir is None or not note_rnn_checkpoint_dir:
-        print 'Retrieving checkpoint of Note RNN from Magenta download server.'
-        urllib.urlretrieve(
+        print('Retrieving checkpoint of Note RNN from Magenta download server.')
+        urllib.request.urlretrieve(
             'http://download.magenta.tensorflow.org/models/'
             'rl_tuner_note_rnn.ckpt', 'note_rnn.ckpt')
         self.note_rnn_checkpoint_dir = os.getcwd()
@@ -312,7 +317,7 @@ class RLTuner(object):
           # TODO(natashamjaques): Remove print statement once tf.logging outputs
           # to Jupyter notebooks (once the following issue is resolved:
           # https://github.com/tensorflow/tensorflow/issues/3047)
-          print '\nSuccessfully initialized internal nets from checkpoint!'
+          print('\nSuccessfully initialized internal nets from checkpoint!')
           tf.logging.info('\nSuccessfully initialized internal nets from '
                           'checkpoint!')
         else:
@@ -616,10 +621,10 @@ class RLTuner(object):
         # TODO(natashamjaques): Remove print statement once tf.logging outputs
         # to Jupyter notebooks (once the following issue is resolved:
         # https://github.com/tensorflow/tensorflow/issues/3047)
-        print 'Training iteration', i
-        print '\tReward for last', self.output_every_nth, 'steps:', r
-        print '\t\tMusic theory reward:', self.music_theory_reward_last_n
-        print '\t\tNote RNN reward:', self.note_rnn_reward_last_n
+        print('Training iteration', i)
+        print('\tReward for last', self.output_every_nth, 'steps:', r)
+        print('\t\tMusic theory reward:', self.music_theory_reward_last_n)
+        print('\t\tNote RNN reward:', self.note_rnn_reward_last_n)
 
         if self.exploration_mode == 'egreedy':
           exploration_p = rl_tuner_ops.linear_annealing(
@@ -1226,7 +1231,7 @@ class RLTuner(object):
     contains_breaks = False
 
     # Note that the current action yas not yet been added to the composition
-    for i in xrange(len(self.composition)-1, -1, -1):
+    for i in range(len(self.composition)-1, -1, -1):
       if self.composition[i] == action_note:
         num_repeated += 1
       elif self.composition[i] == NOTE_OFF:
@@ -1790,7 +1795,7 @@ class RLTuner(object):
     # TODO(natashamjaques): Remove print statement once tf.logging outputs
     # to Jupyter notebooks (once the following issue is resolved:
     # https://github.com/tensorflow/tensorflow/issues/3047)
-    print 'Generated sequence:', generated_seq
+    print('Generated sequence:', generated_seq)
 
     melody = mlib.Melody(rl_tuner_ops.decoder(generated_seq,
                                               self.q_network.transpose_amount))
@@ -2022,7 +2027,7 @@ class RLTuner(object):
     # TODO(natashamjaques): Remove print statement once tf.logging outputs
     # to Jupyter notebooks (once the following issue is resolved:
     # https://github.com/tensorflow/tensorflow/issues/3047)
-    print 'Attempting to restore from checkpoint', checkpoint_file
+    print('Attempting to restore from checkpoint', checkpoint_file)
     tf.logging.info('Attempting to restore from checkpoint %s', checkpoint_file)
 
     self.saver.restore(self.session, checkpoint_file)
@@ -2032,7 +2037,7 @@ class RLTuner(object):
       # TODO(natashamjaques): Remove print statement once tf.logging outputs
       # to Jupyter notebooks (once the following issue is resolved:
       # https://github.com/tensorflow/tensorflow/issues/3047)
-      print 'Attempting to load saved reward values from file', npz_file_name
+      print('Attempting to load saved reward values from file', npz_file_name)
       tf.logging.info('Attempting to load saved reward values from file %s',
                       npz_file_name)
       npz_file = np.load(npz_file_name)

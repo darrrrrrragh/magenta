@@ -28,6 +28,7 @@ sh_binary(
 
         # Scripts
         "//magenta/interfaces/midi:magenta_midi",
+        "//magenta/interfaces/midi:midi_clock",
         "//magenta/scripts:convert_dir_to_note_sequences",
 
         # Drums RNN Model and Scripts
@@ -48,6 +49,23 @@ sh_binary(
         "//magenta/models/melody_rnn:melody_rnn_generate",
         "//magenta/models/melody_rnn:melody_rnn_train",
 
+        # Music VAE  Model and Scripts
+        "//magenta/models/music_vae",
+        "//magenta/models/music_vae:music_vae_generate",
+        "//magenta/models/music_vae:music_vae_train",
+
+        # Performance RNN Model and Scripts
+        "//magenta/models/performance_rnn",
+        "//magenta/models/performance_rnn:performance_rnn_create_dataset",
+        "//magenta/models/performance_rnn:performance_rnn_generate",
+        "//magenta/models/performance_rnn:performance_rnn_train",
+
+        # Pianoroll RNN-NADE Model and Scripts
+        "//magenta/models/pianoroll_rnn_nade",
+        "//magenta/models/pianoroll_rnn_nade:pianoroll_rnn_nade_create_dataset",
+        "//magenta/models/pianoroll_rnn_nade:pianoroll_rnn_nade_generate",
+        "//magenta/models/pianoroll_rnn_nade:pianoroll_rnn_nade_train",
+
         # Polyphony RNN Model and Scripts
         "//magenta/models/polyphony_rnn",
         "//magenta/models/polyphony_rnn:polyphony_rnn_create_dataset",
@@ -64,5 +82,25 @@ sh_binary(
         "//magenta/models/image_stylization:image_stylization_finetune",
         "//magenta/models/image_stylization:image_stylization_train",
         "//magenta/models/image_stylization:image_stylization_transform",
+
+        # Arbitrary Image Stylization Scripts
+        "//magenta/models/arbitrary_image_stylization:arbitrary_image_stylization_evaluate",
+        "//magenta/models/arbitrary_image_stylization:arbitrary_image_stylization_train",
+        "//magenta/models/arbitrary_image_stylization:arbitrary_image_stylization_with_weights",
+
+        # SketchRNN Model and Scripts
+        "//magenta/models/sketch_rnn",
+        "//magenta/models/sketch_rnn:sketch_rnn_train",
+
+        # NSynth
+        "//magenta/models/nsynth/wavenet:nsynth_generate",
+        "//magenta/models/nsynth/wavenet:nsynth_save_embeddings",
+
+        # Onsets and Frames Transcription
+        "//magenta/models/onsets_frames_transcription",
+        "//magenta/models/onsets_frames_transcription:onsets_frames_transcription_create_dataset",
+        "//magenta/models/onsets_frames_transcription:onsets_frames_transcription_infer",
+        "//magenta/models/onsets_frames_transcription:onsets_frames_transcription_train",
+        "//magenta/models/onsets_frames_transcription:onsets_frames_transcription_transcribe",
     ],
 )

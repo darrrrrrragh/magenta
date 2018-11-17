@@ -21,10 +21,7 @@ file.
 """
 
 import collections
-import copy
 import operator
-
-# internal imports
 
 from magenta.music import constants
 from magenta.music import events_lib
@@ -73,6 +70,8 @@ class DrumTrack(events_lib.SimpleEventSequence):
 
   def __init__(self, events=None, **kwargs):
     """Construct a DrumTrack."""
+    if 'pad_event' in kwargs:
+      del kwargs['pad_event']
     super(DrumTrack, self).__init__(pad_event=frozenset(),
                                     events=events, **kwargs)
 
@@ -99,18 +98,6 @@ class DrumTrack(events_lib.SimpleEventSequence):
         events, start_step=start_step, steps_per_bar=steps_per_bar,
         steps_per_quarter=steps_per_quarter)
 
-  def __deepcopy__(self, unused_memo=None):
-    return type(self)(events=copy.deepcopy(self._events),
-                      start_step=self.start_step,
-                      steps_per_bar=self.steps_per_bar,
-                      steps_per_quarter=self.steps_per_quarter)
-
-  def __eq__(self, other):
-    if not isinstance(other, DrumTrack):
-      return False
-    else:
-      return super(DrumTrack, self).__eq__(other)
-
   def append(self, event):
     """Appends the event to the end of the drums and increments the end step.
 
@@ -129,7 +116,8 @@ class DrumTrack(events_lib.SimpleEventSequence):
                               quantized_sequence,
                               search_start_step=0,
                               gap_bars=1,
-                              pad_end=False):
+                              pad_end=False,
+                              ignore_is_drum=False):
     """Populate self with drums from the given quantized NoteSequence object.
 
     A drum track is extracted from the given quantized sequence starting at time
@@ -153,13 +141,14 @@ class DrumTrack(events_lib.SimpleEventSequence):
           drum track is ended.
       pad_end: If True, the end of the drums will be padded with empty events so
           that it will end at a bar boundary.
+      ignore_is_drum: Whether accept notes where `is_drum` is False.
 
     Raises:
       NonIntegerStepsPerBarException: If `quantized_sequence`'s bar length
           (derived from its time signature) is not an integer number of time
           steps.
     """
-    sequences_lib.assert_is_quantized_sequence(quantized_sequence)
+    sequences_lib.assert_is_relative_quantized_sequence(quantized_sequence)
     self._reset()
 
     steps_per_bar_float = sequences_lib.steps_per_bar_in_quantized_sequence(
@@ -175,10 +164,10 @@ class DrumTrack(events_lib.SimpleEventSequence):
 
     # Group all drum notes that start at the same step.
     all_notes = [note for note in quantized_sequence.notes
-                 if note.is_drum                 # drums only
-                 and note.velocity               # no zero-velocity notes
-                 # after start_step only
-                 and note.quantized_start_step >= search_start_step]
+                 if ((note.is_drum or ignore_is_drum)  # drums only
+                     and note.velocity  # no zero-velocity notes
+                     # after start_step only
+                     and note.quantized_start_step >= search_start_step)]
     grouped_notes = collections.defaultdict(list)
     for note in all_notes:
       grouped_notes[note.quantized_start_step].append(note)
@@ -284,7 +273,8 @@ def extract_drum_tracks(quantized_sequence,
                         max_steps_truncate=None,
                         max_steps_discard=None,
                         gap_bars=1.0,
-                        pad_end=False):
+                        pad_end=False,
+                        ignore_is_drum=False):
   """Extracts a list of drum tracks from the given quantized NoteSequence.
 
   This function will search through `quantized_sequence` for drum tracks. A drum
@@ -319,6 +309,7 @@ def extract_drum_tracks(quantized_sequence,
         of no drums is encountered.
     pad_end: If True, the end of the drum track will be padded with empty events
         so that it will end at a bar boundary.
+    ignore_is_drum: Whether accept notes where `is_drum` is False.
 
   Returns:
     drum_tracks: A python list of DrumTrack instances.
@@ -355,7 +346,8 @@ def extract_drum_tracks(quantized_sequence,
           quantized_sequence,
           search_start_step=search_start_step,
           gap_bars=gap_bars,
-          pad_end=pad_end)
+          pad_end=pad_end,
+          ignore_is_drum=ignore_is_drum)
     except events_lib.NonIntegerStepsPerBarException:
       raise
     search_start_step = (
@@ -365,7 +357,7 @@ def extract_drum_tracks(quantized_sequence,
       break
 
     # Require a certain drum track length.
-    if len(drum_track) - 1 < drum_track.steps_per_bar * min_bars:
+    if len(drum_track) < drum_track.steps_per_bar * min_bars:
       stats['drum_tracks_discarded_too_short'].increment()
       continue
 
@@ -406,4 +398,3 @@ def midi_file_to_drum_track(midi_file, steps_per_quarter=4):
   drum_track = DrumTrack()
   drum_track.from_quantized_sequence(quantized_sequence)
   return drum_track
-

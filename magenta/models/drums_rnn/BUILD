@@ -19,6 +19,7 @@ licenses(["notice"])  # Apache 2.0
 py_library(
     name = "drums_rnn",
     srcs = ["__init__.py"],
+    srcs_version = "PY2AND3",
     visibility = ["//magenta/tools/pip:__subpackages__"],
     deps = [
         ":drums_rnn_model",
@@ -30,7 +31,7 @@ py_library(
     srcs = ["drums_rnn_config_flags.py"],
     srcs_version = "PY2AND3",
     visibility = [
-        # internal model:drums_rnn
+        # internal model:music_rnn
     ],
     deps = [
         ":drums_rnn_model",
@@ -61,10 +62,13 @@ py_library(
 
 py_binary(
     name = "drums_rnn_create_dataset",
-    srcs = ["drums_rnn_create_dataset.py"],
+    srcs = [
+        "drums_rnn_create_dataset.py",
+        "drums_rnn_pipeline.py"
+    ],
     srcs_version = "PY2AND3",
     visibility = [
-        # internal model:drums_rnn
+        # internal model:music_rnn
         "//magenta/tools/pip:__subpackages__",
     ],
     deps = [
@@ -77,6 +81,7 @@ py_binary(
 py_test(
     name = "drums_rnn_create_dataset_test",
     srcs = ["drums_rnn_create_dataset_test.py"],
+    srcs_version = "PY2AND3",
     deps = [
         ":drums_rnn_create_dataset",
         "//magenta",

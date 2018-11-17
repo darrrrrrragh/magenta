@@ -17,8 +17,6 @@ import ast
 import os
 import time
 
-# internal imports
-
 import tensorflow as tf
 import magenta
 
@@ -88,8 +86,6 @@ tf.app.flags.DEFINE_float(
     'The quarters per minute to play generated output at. If a primer MIDI is '
     'given, the qpm from that will override this flag. If qpm is None, qpm '
     'will default to 120.')
-tf.app.flags.DEFINE_integer(
-    'steps_per_quarter', 4, 'What precision to use when quantizing the melody.')
 tf.app.flags.DEFINE_float(
     'temperature', 1.0,
     'The randomness of the generated melodies. 1.0 uses the unaltered softmax '
@@ -137,21 +133,6 @@ def get_bundle():
   return magenta.music.read_bundle_file(bundle_file)
 
 
-def _steps_to_seconds(steps, qpm):
-  """Converts steps to seconds.
-
-  Uses the current flag value for steps_per_quarter.
-
-  Args:
-    steps: number of steps.
-    qpm: current qpm.
-
-  Returns:
-    Number of seconds the steps represent.
-  """
-  return steps * 60.0 / qpm / FLAGS.steps_per_quarter
-
-
 def run_with_flags(generator):
   """Generates melodies and saves them as MIDI files.
 
@@ -195,7 +176,8 @@ def run_with_flags(generator):
 
   # Derive the total number of seconds to generate based on the QPM of the
   # priming sequence and the length of the backing chord progression.
-  total_seconds = _steps_to_seconds(len(backing_chords), qpm)
+  seconds_per_step = 60.0 / qpm / generator.steps_per_quarter
+  total_seconds = len(backing_chords) * seconds_per_step
 
   # Specify start/stop time for generation based on starting generation at the
   # end of the priming sequence and continuing until the sequence is num_steps
@@ -207,7 +189,7 @@ def run_with_flags(generator):
     last_end_time = (max(n.end_time for n in primer_sequence.notes)
                      if primer_sequence.notes else 0)
     generate_section = generator_options.generate_sections.add(
-        start_time=last_end_time + _steps_to_seconds(1, qpm),
+        start_time=last_end_time + seconds_per_step,
         end_time=total_seconds)
 
     if generate_section.start_time >= generate_section.end_time:
@@ -230,7 +212,7 @@ def run_with_flags(generator):
     if text_annotation.annotation_type == CHORD_SYMBOL:
       chord = input_sequence.text_annotations.add()
       chord.CopyFrom(text_annotation)
-  input_sequence.total_time = _steps_to_seconds(len(backing_chords), qpm)
+  input_sequence.total_time = len(backing_chords) * seconds_per_step
 
   generator_options.args['temperature'].float_value = FLAGS.temperature
   generator_options.args['beam_size'].int_value = FLAGS.beam_size
@@ -263,13 +245,24 @@ def main(unused_argv):
   """Saves bundle or runs generator based on flags."""
   tf.logging.set_verbosity(FLAGS.log)
 
-  config = improv_rnn_config_flags.config_from_flags()
+  bundle = get_bundle()
+
+  if bundle:
+    config_id = bundle.generator_details.id
+    config = improv_rnn_model.default_configs[config_id]
+    config.hparams.parse(FLAGS.hparams)
+  else:
+    config = improv_rnn_config_flags.config_from_flags()
+  # Having too large of a batch size will slow generation down unnecessarily.
+  config.hparams.batch_size = min(
+      config.hparams.batch_size, FLAGS.beam_size * FLAGS.branch_factor)
+
   generator = improv_rnn_sequence_generator.ImprovRnnSequenceGenerator(
       model=improv_rnn_model.ImprovRnnModel(config),
       details=config.details,
-      steps_per_quarter=FLAGS.steps_per_quarter,
+      steps_per_quarter=config.steps_per_quarter,
       checkpoint=get_checkpoint(),
-      bundle=get_bundle())
+      bundle=bundle)
 
   if FLAGS.save_generator_bundle:
     bundle_filename = os.path.expanduser(FLAGS.bundle_file)

@@ -22,9 +22,12 @@ specifies an encoding of Melody objects into input vectors and output labels for
 use by melody models.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import collections
 
-# internal imports
 from magenta.music import constants
 from magenta.music import encoder_decoder
 from magenta.music import melodies_lib
@@ -253,7 +256,7 @@ class KeyMelodyEncoderDecoder(encoder_decoder.EventSequenceEncoderDecoder):
     # Binary time counter giving the metric location of the *next* note.
     n = len(sub_melody)
     for i in range(self._binary_counter_bits):
-      input_[offset] = 1.0 if (n / 2 ** i) % 2 else -1.0
+      input_[offset] = 1.0 if (n // 2 ** i) % 2 else -1.0
       offset += 1
 
     # The next event is the start of a bar.

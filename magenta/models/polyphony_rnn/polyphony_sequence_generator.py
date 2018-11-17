@@ -16,8 +16,6 @@
 import copy
 from functools import partial
 
-# internal imports
-
 import tensorflow as tf
 
 from magenta.models.polyphony_rnn import polyphony_lib
@@ -45,7 +43,8 @@ class PolyphonyRnnSequenceGenerator(mm.BaseSequenceGenerator):
           and metagraph. Mutually exclusive with `checkpoint`.
     """
     super(PolyphonyRnnSequenceGenerator, self).__init__(
-        model, details, steps_per_quarter, checkpoint, bundle)
+        model, details, checkpoint, bundle)
+    self.steps_per_quarter = steps_per_quarter
 
   def _generate(self, input_sequence, generator_options):
     if len(generator_options.input_sections) > 1:
@@ -72,7 +71,7 @@ class PolyphonyRnnSequenceGenerator(mm.BaseSequenceGenerator):
       primer_sequence = mm.trim_note_sequence(
           input_sequence, input_section.start_time, input_section.end_time)
       input_start_step = mm.quantize_to_step(
-          input_section.start_time, steps_per_second)
+          input_section.start_time, steps_per_second, quantize_cutoff=0)
     else:
       primer_sequence = input_sequence
       input_start_step = 0
@@ -95,7 +94,7 @@ class PolyphonyRnnSequenceGenerator(mm.BaseSequenceGenerator):
     assert len(extracted_seqs) <= 1
 
     generate_start_step = mm.quantize_to_step(
-        generate_section.start_time, steps_per_second)
+        generate_section.start_time, steps_per_second, quantize_cutoff=0)
     # Note that when quantizing end_step, we set quantize_cutoff to 1.0 so it
     # always rounds down. This avoids generating a sequence that ends at 5.0
     # seconds when the requested end time is 4.99.
@@ -248,7 +247,8 @@ def get_generator_map():
   """
   def create_sequence_generator(config, **kwargs):
     return PolyphonyRnnSequenceGenerator(
-        polyphony_model.PolyphonyRnnModel(config), config.details, **kwargs)
+        polyphony_model.PolyphonyRnnModel(config), config.details,
+        steps_per_quarter=config.steps_per_quarter, **kwargs)
 
   return {key: partial(create_sequence_generator, config)
           for (key, config) in polyphony_model.default_configs.items()}

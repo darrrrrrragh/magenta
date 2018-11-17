@@ -13,13 +13,10 @@
 # limitations under the License.
 """Import NoteSequences from MusicNet."""
 
-import StringIO
-
-# internal imports
 import numpy as np
+from six import BytesIO
 import tensorflow as tf
 
-from magenta.music import note_sequence_io
 from magenta.protobuf import music_pb2
 
 MUSICNET_SAMPLE_RATE = 44100
@@ -38,8 +35,11 @@ def note_interval_tree_to_sequence_proto(note_interval_tree, sample_rate):
   Returns:
     A NoteSequence proto containing the notes in the interval tree.
   """
-  note_intervals = note_interval_tree.items()
   sequence = music_pb2.NoteSequence()
+
+  # Sort note intervals by onset time.
+  note_intervals = sorted(note_interval_tree,
+                          key=lambda note_interval: note_interval.begin)
 
   # MusicNet represents "instruments" as MIDI program numbers. Here we map each
   # program to a separate MIDI instrument.
@@ -53,7 +53,8 @@ def note_interval_tree_to_sequence_proto(note_interval_tree, sample_rate):
     note.velocity = MUSICNET_NOTE_VELOCITY
     note.start_time = float(note_interval.begin) / sample_rate
     note.end_time = float(note_interval.end) / sample_rate
-    note.program = note_data[0]
+    # MusicNet "instrument" numbers use 1-based indexing, so we subtract 1 here.
+    note.program = note_data[0] - 1
     note.is_drum = False
 
     if note.program not in instruments:
@@ -83,10 +84,10 @@ def musicnet_iterator(musicnet_file):
   """
   with tf.gfile.FastGFile(musicnet_file, 'rb') as f:
     # Unfortunately the gfile seek function breaks the reading of NumPy
-    # archives, so we read the archive first then load as StringIO.
-    musicnet_string = f.read()
-    musicnet_stringio = StringIO.StringIO(musicnet_string)
-    musicnet = np.load(musicnet_stringio)
+    # archives, so we read the archive first then load as BytesIO.
+    musicnet_bytes = f.read()
+    musicnet_bytesio = BytesIO(musicnet_bytes)
+    musicnet = np.load(musicnet_bytesio, encoding='latin1')
 
   for file_id in musicnet.files:
     audio, note_interval_tree = musicnet[file_id]
@@ -95,9 +96,7 @@ def musicnet_iterator(musicnet_file):
 
     sequence.filename = file_id
     sequence.collection_name = 'MusicNet'
-
-    sequence.id = note_sequence_io.generate_note_sequence_id(
-        sequence.filename, sequence.collection_name, 'musicnet')
+    sequence.id = '/id/musicnet/%s' % file_id
 
     sequence.source_info.source_type = (
         music_pb2.NoteSequence.SourceInfo.PERFORMANCE_BASED)

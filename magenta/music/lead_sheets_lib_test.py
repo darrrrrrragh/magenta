@@ -15,7 +15,6 @@
 
 import copy
 
-# internal imports
 import tensorflow as tf
 
 from magenta.common import testing_lib as common_testing_lib
@@ -181,6 +180,7 @@ class LeadSheetsLibTest(tf.test.TestCase):
     self.assertEquals(expected_chords, lead_sheet.chords)
     self.assertEquals(9, lead_sheet.start_step)
     self.assertEquals(14, lead_sheet.end_step)
+    self.assertListEqual([9, 10, 11, 12, 13], lead_sheet.steps)
 
   def testToSequence(self):
     # Sequence produced from lead sheet should contain notes from melody
